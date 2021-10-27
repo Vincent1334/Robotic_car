@@ -32,12 +32,12 @@ def get_values(data):
     print("maxvalue:", max_v)
     print("minvalue:", min_v)
 	
-	msg = scan_range()
-	msg.max_v = max_v
-	msg.min_v = min_v
-	msg.header.stamp = rospy.Time.now();
+    msg = scan_range()
+    msg.max_v = max_v
+    msg.min_v = min_v
+    msg.header.stamp = rospy.Time.now();
 
-	pub_scanRange.pub(msg)
+    pub_scanRange.publish(msg)
 	
 
     

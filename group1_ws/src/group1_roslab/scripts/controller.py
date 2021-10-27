@@ -27,8 +27,9 @@ def control_callback(data):
 	msg.angle = left
 	pub.publish(msg)
 
-if __name__ == ’__main__’:	
-	pub = rospy.Publisher('driverParameters', drive_param, queue_size = 10)
-	rospy.Subscriber('keyboardTalker',String, control_callback)
+if __name__ == "__main__":	
+	rospy.init_node("controller",anonymous = True)
+	pub = rospy.Publisher("driverParameters", drive_param, queue_size = 10)
+	rospy.Subscriber("keyboardTalker",String, control_callback)
 	# rospy.Subscriber("scan", LaserScan, scan_callback)
 	rospy.spin()

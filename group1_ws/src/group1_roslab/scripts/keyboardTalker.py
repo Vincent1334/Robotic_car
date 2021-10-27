@@ -9,8 +9,8 @@ stdscr.keypad(1)
 stdscr.refresh()
 
 def main():
-	key = ’’
-	while key != ord(’q’):
+	key = ""
+	while key != ord("q"):
 		key = stdscr.getch()
 		stdscr.refresh()
 		print key
@@ -25,8 +25,8 @@ def main():
 	curses.endwin()
 
 # Boilerplate code to start this ROS node.
-if __name__ == ’__main__’:
-	rospy.init_node(’keyboardTalker’,anonymous = True)
-	pub = rospy.Publisher(’direction’, String, queue_size = 10)
+if __name__ == "__main__":
+	rospy.init_node("keyboardTalker",anonymous = True)
+	pub = rospy.Publisher("direction", String, queue_size = 10)
 	main()
 	rospy.spin()
