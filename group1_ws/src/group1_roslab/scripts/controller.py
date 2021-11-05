@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import String # import std message
-from race.msg import drive_param # import the custom message
+from ackermann_msgs.msg import AckermannDriveStamped # import the custom message
 
 def control_callback(data):
 	key = data.data
@@ -14,22 +14,22 @@ def control_callback(data):
 		forward = 0
 
 	if key == "left":
-		left = 0.5
+		left = 0.4189
 		forward = 0.5
 	elif key == "right":
-		left = -0.5
+		left = -0.4189
 		forward = 0.5
 	else:
 		left = 0
-
-	msg = drive_param()	
-	msg.velocity = forward
-	msg.angle = left
-	pub.publish(msg)
+	
+	drive_msg = AckermannDriveStamped()
+        drive_msg.drive.speed = forward
+        drive_msg.drive.steering_angle = left
+	pub.publish(drive_msg)
 
 if __name__ == "__main__":	
 	rospy.init_node("controller",anonymous = True)
-	pub = rospy.Publisher("driverParameters", drive_param, queue_size = 10)
+	pub = rospy.Publisher("vesc/low_level/ackermann_cmd_mux/input/teleop", AckermannDriveStamped, queue_size = 10)
 	rospy.Subscriber("keyboardTalker",String, control_callback)
 	# rospy.Subscriber("scan", LaserScan, scan_callback)
 	rospy.spin()
