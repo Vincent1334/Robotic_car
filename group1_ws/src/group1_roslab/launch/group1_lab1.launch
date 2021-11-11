@@ -2,7 +2,7 @@
     <!-- node pkg="group1_roslab" name="lidarScanner" type="lidarScanner.py" output="screen"/ -->
     <node pkg="group1_roslab" name="controller" type="controller.py" output="screen"/>
     <node pkg="group1_roslab" name="keyboardTalker" type="keyboardTalker.py" output="screen"/>
-    <!-- node pkg="group1_roslab" name="safety_node" type="safety_node.py" output="screen"/ -->
+    <node pkg="group1_roslab" name="safety_node" type="safety_node.py" output="screen"/>
     <include file="$(find racecar)/launch/teleop.launch" />
     <!-- node type="rviz" name="rviz" pkg="rviz" args="-d $(find group1_roslab)/cfg/config_file.rviz" / -->
 </launch>

@@ -42,28 +42,27 @@ class Safety(object):
         #self.speed = np.sqrt(odom_msg.twist.covariance.linear.x ** 2 + odom_msg.twist.covariance.linear.y ** 2)        
 
     def scan_callback(self, scan_msg):        
-        
-        angle = scan_msg.angle_min-135
+        if self.speed < 0:
+            return
         TTCs= np.ones(1081)-1000
         #leftside
-        for i in range(135,int(scan_msg.angle_max)):
+        for i in range(540,int(scan_msg.angle_max)*4-400):
             value = scan_msg.ranges[i]
             if np.isnan(value) or np.isinf(value) or self.speed == 0:
                 continue
-            TTC = -(value / (self.speed * abs(np.cos(np.deg2rad(scan_msg.angle_max+135)))))
+            TTC = -(value / (self.speed * abs(np.cos(np.deg2rad(i/4)))))
             TTCs[i] = TTC
-            print("TTC", TTC)
                 
         #rightside
-        for i in range(int(scan_msg.angle_min),135):
+        for i in range(int(scan_msg.angle_min)*4+400,540):
             value = scan_msg.ranges[i]
             if np.isnan(value) or np.isinf(value) or self.speed == 0:
                 continue
-            TTC = -(value / (self.speed * abs(np.cos(np.deg2rad(scan_msg.angle_min-135)))))
+            TTC = -(value / (self.speed * abs(np.cos(np.deg2rad(i/4)))))
             TTCs[i] = TTC
 
-        if np.ndarray.max(TTCs)  > -1:        
-            # publish brake message and publish controller bool
+        if np.ndarray.max(TTCs)  > -2:        
+            # publish brake message and publish controller bool            
             break_msg =  AckermannDriveStamped()
             break_msg.drive.speed = 0
             pub_ackerman.publish(break_msg)
