@@ -10,9 +10,9 @@ from sensor_msgs.msg import Image, LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
 
 #PID CONTROL PARAMS
-kp = #TODO
-kd = #TODO
-ki = #TODO
+kp = 1
+kd = 1
+ki = 1
 servo_offset = 0.0
 prev_error = 0.0 
 error = 0.0
@@ -40,11 +40,10 @@ class WallFollow:
         # data: single message from topic /scan
         # angle: between -45 to 225 degrees, where 0 degrees is directly to the right
         # Outputs length in meters to object with angle in lidar scan field of view
-        #make sure to take care of nans etc.
-        #TODO: implement
+        #make sure to take care of nans etc.        
         if(angle < -45 or angle > 225):
             return 0.0
-        return data.ranges[angle*4+45*4+data.angle_min)*4]
+        return data.ranges[angle*4+45*4+data.angle_min*4]
 
 
     def pid_control(self, error, velocity):
@@ -52,14 +51,11 @@ class WallFollow:
         global prev_error
         global kp
         global ki
-        global kd
-        angle = 0.0
-        #TODO: Use kp, ki & kd to implement a PID controller for 
+        global kd        
         
         angle = kp * error + kd * (error-prev_error) #+ ki * np.(error)
         prev_error = error
-        
-        
+        velocity = (1/angle) * VELOCITY
         
         drive_msg = AckermannDriveStamped()
         drive_msg.header.stamp = rospy.Time.now()
@@ -68,25 +64,22 @@ class WallFollow:
         drive_msg.drive.speed = velocity
         self.drive_pub.publish(drive_msg)
 
-    def followLeft(self, data, leftDist):
+    def followRight(self, data, rightDist):
         #Follow left wall as per the algorithm 
-         L = 1
-        theta = 10
+        L = 1
+        theta = 70
         a = getRange(theta)
         b = getRange(0)
         alpha = np.arctan((a * np.cos(theta) - b)/(a * np.cos(theta) ))
         dist = b * np.cos(alpha)
-        
-        error = dist + L * np.sin(alpha)
-        #TODO:implement
-        
-        
-        return 0.0 
+        dist_future = dist + CAR_LENGTH * np.sin(alpha)
+        error = dist_future - rightDist
+
+        return error 
 
     def lidar_callback(self, data):
        
-        error = 0.0 #TODO: replace with error returned by followLeft
-        #send error to pid_control
+        error = followRight(self, data , DESIRED_DISTANCE_RIGHT)
         self.pid_control(error, VELOCITY)
 
 def main(args):
