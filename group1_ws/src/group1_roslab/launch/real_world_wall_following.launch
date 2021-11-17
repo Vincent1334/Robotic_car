@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+  <include file="$(find racecar)/launch/teleop.launch"/>
+
+
+  <node pkg="group1_roslab" name="WallFollow_node" type="wall_following.py" output="screen"/>
+  
+  
+</launch>

@@ -10,20 +10,21 @@ from sensor_msgs.msg import Image, LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
 
 #PID CONTROL PARAMS
-kp = 0.8
-kd = 0.25
-ki = 1
+kp = 0.5
+kd = 0.0
+ki = 0
 servo_offset = 0.0
 prev_error = 0.0 
 error = 0.0
 integral = 0.0
 
 
+
 #WALL FOLLOW PARAMS
 ANGLE_RANGE = 270 # Hokuyo 10LX has 270 degrees scan
-DESIRED_DISTANCE_RIGHT = 0.9 # meters
-DESIRED_DISTANCE_LEFT = 0.55
-VELOCITY = 0.3 # meters per second
+DESIRED_DISTANCE_RIGHT = 0.20 # meters
+DESIRED_DISTANCE_LEFT = 0.20
+VELOCITY = 1.0 # meters per second
 CAR_LENGTH = 0.50 # Traxxas Rally is 20 inches or 0.5 meters
 
 class WallFollow:
@@ -35,8 +36,9 @@ class WallFollow:
         drive_topic = '/nav'
 
         self.lidar_sub = rospy.Subscriber('scan', LaserScan, self.lidar_callback)
-        self.drive_pub = rospy.Publisher('vesc/high_level/ackermann_cmd_mux/input/nav_0', AckermannDrive, queue_size = 10)
-
+        #self.drive_pub = rospy.Publisher('vesc/high_level/ackermann_cmd_mux/input/nav_0', AckermannDrive, queue_size = 10)
+        self.drive_pub = rospy.Publisher('vesc/low_level/ackermann_cmd_mux/input/teleop', AckermannDriveStamped, queue_size = 10)
+        
     def getRange(self, data, angle):
         # data: single message from topic /scan
         # angle: between -45 to 225 degrees, where 0 degrees is directly to the right
@@ -44,7 +46,7 @@ class WallFollow:
         #make sure to take care of nans etc.        
         if(angle < -45 or angle > 225):
             return 0.0
-        return data.ranges[angle*4+45*4+data.angle_min*4]
+        return data.ranges[int(angle*4+45*4)]
 
 
     def pid_control(self, error, velocity):
@@ -56,37 +58,37 @@ class WallFollow:
         
         angle = kp * error + kd * (error-prev_error) #+ ki * np.(error)
         prev_error = error
-        v = (1/(abs(angle)*20)) * velocity
+        v = (1/(abs(angle))) * velocity
         if v > velocity:
             v = velocity
-        
+        print(angle)
         drive_msg = AckermannDriveStamped()
         drive_msg.header.stamp = rospy.Time.now()
         drive_msg.header.frame_id = "laser"
-        drive_msg.drive.steering_angle = -angle # - by simulation
-        drive_msg.drive.speed = v
+        drive_msg.drive.steering_angle = 0.5 # - by simulation
+        drive_msg.drive.speed = 0
         self.drive_pub.publish(drive_msg)
 
-    def followRight(self, data, rightDist):
+    def followRight(self,data, rightDist):
         #Follow left wall as per the algorithm 
-        L = 0.5
-        theta = 50
-        a = getRange(theta)
-        b = getRange(0)
-        alpha = np.arctan((a * np.cos(theta) - b)/(a * np.cos(theta) ))
+        L = 0.4
+        theta = 10
+        a = self.getRange(data, theta)
+        b = self.getRange(data, 0)
+        alpha = np.arctan2((a * np.cos(theta) - b),(a * np.sin(theta) ))
         dist = b * np.cos(alpha)
         dist_future = dist + L * np.sin(alpha)
         error = dist_future - rightDist
 
         return error 
     
-     def followLeft(self, data, leftDist):
+    def followLeft(self,data, leftDist):
         #Follow left wall as per the algorithm 
-        L = 0.5
-        theta = 180 - 50
-        a = getRange(theta)
-        b = getRange(180)
-        alpha = np.arctan((a * np.cos(theta) - b)/(a * np.cos(theta) ))
+        L = 0.4
+        theta = 180 - 10
+        a = self.getRange(data, theta)
+        b = self.getRange(data, 180)
+        alpha = np.arctan2((a * np.cos(theta) - b),(a * np.sin(theta) ))
         dist = b * np.cos(alpha)
         dist_future = dist + L * np.sin(alpha)
         error = dist_future - leftDist
@@ -95,10 +97,11 @@ class WallFollow:
 
     def lidar_callback(self, data):
        
-        errorRight = followRight(self, data , DESIRED_DISTANCE_RIGHT)
-        errorLeft = followLeft(self, data , DESIRED_DISTANCE_LEFT)
+        errorRight = self.followRight(data, DESIRED_DISTANCE_RIGHT)
+        #errorLeft = followLeft(data , DESIRED_DISTANCE_LEFT)
         
         self.pid_control(errorRight, VELOCITY)
+        #self.pid_control(errorLeft, VELOCITY)
         #if errorRight > errorLeft:
         #    self.pid_control(errorLeft, VELOCITY)
         #else:
