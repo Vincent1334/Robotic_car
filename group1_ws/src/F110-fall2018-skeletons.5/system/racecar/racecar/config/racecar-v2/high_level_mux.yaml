@@ -9,7 +9,7 @@ subscribers:
   - name:        "Nav_0"
     topic:       "input/nav_0"
     timeout:     0.2
-    priority:    50
+    priority:    20
     short_desc:  "Input for autonomous navigation, highest priority"
 
   - name:        "Nav_1"
