@@ -1,0 +1,253 @@
+#!/usr/bin/env python
+import numpy as np
+from numpy import linalg as LA
+import math
+import random
+import rospy
+import os
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Point
+from ackermann_msgs.msg import AckermannDriveStamped
+from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import Path
+#from tf import transform_listener
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
+
+# TODO: import as you need
+ITERATIONS = 5000
+GOAL_RADIUS = 1.5
+STEER_DIST = 0.5
+CAR_SIZE = 0.4
+# class def for tree nodes
+class Node(object):
+    def __init__(self, x = 0, y = 0, parent = None, is_root = False):
+        self.x = x #X index in OccupancyGrid
+        self.y = y #Y index in OccupancyGrid
+        self.parent = parent # parent node
+        self.is_root = is_root # is this the start node
+        
+# class def for RRT
+class RRT(object):
+    
+    testGridPNG = os.path.join('/home/nvidia/group1_ws/src/group1_roslab/grids/TestGrid.png')
+    testGridYAML = os.path.join('/home/nvidia/group1_ws/src/group1_roslab/grids/TestGrid.yaml')
+    
+    def __init__(self):
+        #subscibers
+        rospy.Subscriber("/pf/viz/inferred_pose", PoseStamped , self.pf_callback)
+        rospy.Subscriber("/map", OccupancyGrid , self.map_callback)
+        rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.goalpose_callback)
+        # publishers
+        topic = ’visualization_marker_array’
+        self.markerPublisher = rospy.Publisher(topic, MarkerArray, queue_size="1")
+        self.pathPublisher = rospy.Publisher("rrt_path", Path, queue_size="1")
+        # class attributes
+        self.grid = np.zeros((2,2)) # OccupancyGrid
+        self.map_height = 0
+        self.map_width = 0
+        self.map_resolution = 1
+        self.map_origin_x = 0
+        self.map_origin_y = 0
+        self.map_origin_rot = 0
+        self.got_map = False
+        self.tree = [] # list of nodes
+        self.x_pos = 0.0 # the cars x position
+        self.y_pos = 0.0 # the cars y position
+        self.goal = [0.0,0.0] #goal position
+        self.markerArr = MarkerArray()
+        
+    def pf_callback(self, pose_msg):
+        """
+        The pose callback when subscribed to particle filter’s inferred pose
+        Here is where you save the cars x and y position for the rrt
+        Args:
+        pose_msg (PoseStamped): incoming message from subscribed topic
+        Returns:
+        """
+        return None
+    
+    def conv_to_gridposition(self, x, y):
+        """
+        Convertes the x and y coordiates into grid positions
+        Args:
+        x (float): x coordiantes
+        y (float): y coordiantes
+        Returns:
+        (idx_x , idx_y) (int int): tuple with the x and y position on the grid
+        """
+        return(idx_x , idx_y)
+    
+    def conv_to_free_space(self, idx_x, idx_y):
+        """
+        Convertes the x and y grid positions into world coordinates
+        Args:
+        idx_x (int): x grid position
+        idx_x (int): y grid position
+        Returns:
+        world_x , world_y) (float float): tuple with the x and y position in world
+        coordinates
+        """
+        return(world_x, world_y)
+    
+    def map_callback(self, map_msg):
+        """
+        Saves the data published by the map_server
+        Args:
+        map_msg (OccupancyGrid): incoming message from subscribed topic
+        Returns:
+        """
+        return None
+    def goalpose_callback(self, goal_msg):
+        """
+        Set the goalposition on the grid.
+        Uses rrt to calculate the waypoints in the occupancy grid.
+        Saves the Path.
+        Args:
+        goal_msg (PoseStamped): incoming message from subscribed topic
+        Returns:
+        """
+        self.goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
+        ’’’
+        #function to test your point conversions
+        goal_idx = self.conv_to_gridposition(self.goal[0], self.goal[1])
+        print "Goal_idx", goal_idx
+        freeSpacePosition = self.conv_to_free_space(goal_idx[0], goal_idx[1])
+        self.visualizeMarkers((freeSpacePosition[0], freeSpacePosition[1])) #create a waypoint in
+        Rviz
+        ’’’
+        #if this node gets a map
+        #do RRT
+        #and publish the path
+        path = []
+        self.publish_path(path)
+        #’’’
+    def sample(self):
+        """
+        This method should randomly sample the grid space, and returns a viable point
+        Args:
+        Returns:
+        (x, y) (float float): a tuple representing the sampled point on the grid
+        """
+        return (x, y)
+    def nearest(self, tree, sampled_point):
+        """
+        This method should return the nearest node on the tree to the sampled point
+        Args:
+        tree ([]): the current RRT tree
+        sampled_point (tuple of (float, float)): point sampled in free space
+        Returns:
+        nearest_node (int): index of neareset node on the tree
+        """
+        nearest_node = 0
+        return nearest_node
+    
+    def steer(self, nearest_node, sampled_point):
+        """
+        This method should return a point in the viable set such that it is closer
+        to the nearest_node than sampled_point is.
+        Args:
+        nearest_node (Node): nearest node on the tree to the sampled point
+        sampled_point (tuple of (float, float)): sampled point
+        Returns:
+        new_node (Node): new node created from steering
+        """
+        new_node = None
+        return None
+    
+    def check_collision(self, nearest_node, new_node):
+        """
+        This method should return whether the path between nearest and new_node is
+        collision free.
+        Args:
+        nearest (Node): nearest node on the tree
+        new_node (Node): new node from steering
+        Returns:
+        collision (bool): whether the path between the two nodes are in collision
+        with the occupancy grid
+        """
+        return True
+    
+    def is_goal(self, latest_added_node, goal_x, goal_y):
+        """
+        This method should return whether the latest added node is close enough
+        to the goal.
+        Args:
+        latest_added_node (Node): latest added node on the tree
+        goal_x (double): x coordinate of the current goal
+        goal_y (double): y coordinate of the current goal
+        Returns:
+        close_enough (bool): true if node is close enoughg to the goal
+        """
+        return False
+    
+    def find_path(self, latest_added_node):
+        """
+        This method returns a path as a list of Nodes connecting the starting point to
+        the goal once the latest added node is close enough to the goal
+        Args:
+        latest_added_node (Node): latest added node in the tree
+        Returns:
+        path ([]): valid path as a list of Nodes
+        """
+        path = []
+        return path
+    
+    def publish_path(self, path):
+        """
+        This method publishes a Path msg with the path positions to the goal
+        Args:
+        path ([]): node path to the goal
+        Returns:
+        """
+        msg = Path()
+        #add node positions from path to the msg
+        #publish the path
+        self.pathPublisher.publish(msg)
+    def visualizeMarkers(self, points):
+        """
+        visualize the nodes as markers
+        """
+        markerArray = self.markerArr
+        x = float(points[0])
+        y = float(points[1])
+        marker = Marker()
+        marker.header.frame_id = "/map"
+        marker.type = marker.SPHERE
+        marker.action = marker.ADD
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+        marker.color.a = 1.0
+        marker.color.r = 1.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.pose.orientation.w = 1.0
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = 0
+        markerArray.markers.append(marker)
+        # Renumber the marker IDs
+        id = 0
+        for m in markerArray.markers:
+            m.id = id
+            id += 1
+        # Publish the MarkerArray
+        self.markerPublisher.publish(markerArray)
+        
+# Computes the Euclidean distance between two 2D points p1 and p2.
+def dist(p1, p2):
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+def main():
+    rospy.init_node(’rrt’)
+    rrt = RRT()
+    rospy.spin()
+    
+if __name__ == ’__main__’:
+    main()
+    
