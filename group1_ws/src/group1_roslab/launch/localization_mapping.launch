@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+	<!--include file="$(find racecar_gazebo)/launch/racecar.launch">
+		<arg name="world_name" value="track_barca"/>
+  	</include-->
+	<param name="use_sim_time" value="true"/>
+	<node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+		<remap from="scan" to="scan"/>
+		<param name="map_update_interval" value="0.1"/>
+		<param name="odom_frame" value="/vesc/odom"/>
+	</node>
+	<include file="/home/nvidia/group1_ws/src/group1_roslab/launch/wall_following.launch"/>
+	<node pkg="rviz" type="rviz" name="rviz"/>
+	<!--node pkg="group1_roslab" name="controller" type="controller.py" output="screen"/>
+    	
+	<node pkg="wall_following" name="sim_connector_node" type="sim_connector.py" output="screen"/>
+	<node pkg="group1_roslab" name="keyboardTalker" type="keyboardTalker.py" output="screen"/-->
+
+</launch>

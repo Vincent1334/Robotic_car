@@ -14,10 +14,10 @@ def control_callback(data):
 		forward = 0
 
 	if key == "left":
-		left = 0.4189
+		left = 0.3#0.4189
 		forward = 0.5
 	elif key == "right":
-		left = -0.4189
+		left = -0.3#-0.4189
 		forward = 0.5
 	else:
 		left = 0
@@ -29,7 +29,8 @@ def control_callback(data):
 
 if __name__ == "__main__":	
 	rospy.init_node("controller",anonymous = True)
-	pub = rospy.Publisher("vesc/low_level/ackermann_cmd_mux/input/teleop", AckermannDriveStamped, queue_size = 10)
+	#pub = rospy.Publisher("vesc/low_level/ackermann_cmd_mux/input/teleop", AckermannDriveStamped, queue_size = 10)
+	pub = rospy.Publisher("vesc/high_level/ackermann_cmd_mux/input/nav_0", AckermannDriveStamped, queue_size = 10)
 	rospy.Subscriber("keyboardTalker",String, control_callback)
 	# rospy.Subscriber("scan", LaserScan, scan_callback)
 	rospy.spin()

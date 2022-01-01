@@ -7,3 +7,4 @@
     <include file="src/F110-fall2018-skeletons.5/labs/wall_following/launch/real_world_wall_following.launch" />
     <!-- node type="rviz" name="rviz" pkg="rviz" args="-d $(find group1_roslab)/cfg/config_file.rviz" / -->
 </launch>
+
