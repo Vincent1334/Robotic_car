@@ -5,8 +5,7 @@
   </include>
 
   # output="screen" allows us to see print statements
-  <node pkg="wall_following" name="pid_error_node" type="pid_error.py" output="screen"/> 
-  <node pkg="wall_following" name="control_node" type="control.py" output="screen"/>
+  <node pkg="group1_roslab" name="WallFollow_node" type="wall_following.py" output="screen"/>
   <node pkg="wall_following" name="sim_connector_node" type="sim_connector.py" output="screen"/>
 
 </launch>

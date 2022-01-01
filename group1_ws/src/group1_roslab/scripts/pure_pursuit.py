@@ -10,7 +10,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from tf.transformations import euler_from_quaternion
 import numpy as np
 
-L = 0.2
+L = 1
 index_last_waypoint = 300
 
 class PurePursuit(object):
@@ -46,31 +46,35 @@ class PurePursuit(object):
         nearest_dist = np.inf
         
         # Find the current waypoint to track using methods mentioned in lecture
-        if index_last_waypoint >= len(self.path_points) - 1:
+        if index_last_waypoint >= len(self.path_points) - 2:
            print ('goal!')
         else:
             for i in range(index_last_waypoint,len(self.path_points) - 1):
             
-                point_dist = abs(np.sqrt(x_pos**2 + y_pos**2) -np.sqrt(self.path_points[i][0]**2 + self.path_points[i][1]**2))
+                point_dist = np.sqrt((x_pos - self.path_points[i][0])**2 + (y_pos - self.path_points[i][1])**2)
                 if point_dist > L and point_dist < nearest_dist:
                     nearest_index = i
                     nearest_dist = point_dist
+                    break
         
             index_last_waypoint = nearest_index
-        
+            #print(abs((np.sqrt(x_pos**2 + y_pos**2) -np.sqrt(self.path_points[nearest_index][0]**2 + self.path_points[nearest_index][1]**2))))
+            print (nearest_index)
         
 
         # transform goal point to vehicle frame of reference
         x = self.path_points[nearest_index][0] - x_pos
         y = self.path_points[nearest_index][1] - y_pos
-        x_dist = x*np.cos(eulerAngles[2])-y*np.sin(eulerAngles[2])   
-        y_dist = y*np.cos(eulerAngles[2])+x*np.sin(eulerAngles[2]) 
+        #x_dist = x*np.cos(eulerAngles[2])-y*np.sin(eulerAngles[2])   
+        y_dist = y*np.cos(-eulerAngles[2])+x*np.sin(-eulerAngles[2]) 
         
-       
+        #print("-----")
+        #print(x_dist)
+        #print(y_dist)
 
         # calculate curvature/steering angle
         curvature = 2*y_dist/(L**2)
-        print(curvature)
+        #print(curvature)
         # publish drive message, don't forget to limit the steering angle between -0.4189 and 0.4189 radians
         if abs(curvature) > 0.4189:
             curvature = 0.4189 * np.sign(curvature)
