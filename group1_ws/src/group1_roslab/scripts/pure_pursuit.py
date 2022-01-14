@@ -28,6 +28,7 @@ class PurePursuit(object):
     def __init__(self):
         #Topic for Simulation
         self.pose_sub = rospy.Subscriber('/pf/viz/inferred_pose', PoseStamped, self.pose_callback)
+        self.path_sub = rospy.Subscriber('rrt_path', PoseStamped, self.pose_callback)
         #Topic for real world
         #self.pose_sub = rospy.Subscriber('/pf/inferred_pose', PoseStamped, self.pose_callback)
         self.drive_pub = rospy.Publisher('vesc/high_level/ackermann_cmd_mux/input/nav_0', AckermannDriveStamped, queue_size = 10)
@@ -84,6 +85,9 @@ class PurePursuit(object):
         drive_msg.drive.steering_angle = curvature
         drive_msg.drive.speed = 1
         self.drive_pub.publish(drive_msg)
+        
+    def path_callback(self, path_msg):        
+        path_points = [(float(pose.position.x), float(pose.position.y), float(pose.position.z)) for pose in path_msg.poses]
 
 def main():
     rospy.init_node('pure_pursuit_node')
