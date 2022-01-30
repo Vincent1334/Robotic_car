@@ -38,6 +38,7 @@ class Node(object):
 class RRT(object):
 
     def __init__(self):
+        
         # subscibers
         rospy.Subscriber("/pf/viz/inferred_pose", PoseStamped, self.pf_callback)
         rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
@@ -60,16 +61,22 @@ class RRT(object):
         self.y_pos = 0.0  # the cars y position
         self.goal = [0.0, 0.0]  # goal position
         self.markerArr = MarkerArray()
+        
+        print ("-----------------------------------------------------------------------------------")
+
+        print ("----------------------------------------init-------------------------------------------")
+        print ("-----------------------------------------------------------------------------------")
+
 
     def pf_callback(self, pose_msg):
 
-        # The pose callback when subscribed to particle filter’s inferred pose
+        # The pose callback when subscribed to particle filter's inferred pose
         # Here is where you save the cars x and y position for the rrt
         # Args:
         # pose_msg (PoseStamped): incoming message from subscribed topic
         # Returns:
-        self.x_pos = pose_msg.position.x
-        self.y_pos = pose_msg.position.y
+        self.x_pos = pose_msg.pose.position.x
+        self.y_pos = pose_msg.pose.position.y
 
         return None
 
@@ -116,8 +123,8 @@ class RRT(object):
             a += 1
 
         self.map_resolution = map_msg.info.resolution
-        self.map_origin_x = map_msg.info.pose.position.x
-        self.map_origin_y = map_msg.info.pose.position.y
+        self.map_origin_x = map_msg.info.origin.position.x
+        self.map_origin_y = map_msg.info.origin.position.y
 
         return None
 
@@ -130,6 +137,7 @@ class RRT(object):
         goal_msg (PoseStamped): incoming message from subscribed topic
         Returns:
         """
+        path = []
         self.goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
 
         # function to test your point conversions
@@ -161,7 +169,7 @@ class RRT(object):
                             break
 
                             # and publish the path
-        self.publish_path(path)
+            self.publish_path(path)
 
     def inside_obstacle(self, randPoint):
         return self.grid[randPoint[0], randPoint[1]] == 1
@@ -175,7 +183,7 @@ class RRT(object):
         """
         x = np.random.random_integers(0, self.map_width - 1)
         y = np.random.random_integers(0, self.map_height - 1)
-        xy = (x, y)
+        xy = (x,y)
         return xy
 
     def nearest(self, tree, sampled_point):
@@ -187,8 +195,8 @@ class RRT(object):
         Returns:
         nearest_node (int): index of neareset node on the tree
         """
-        nearest_node = None
-        nearest_dist = np.sqrt(sampled_point.x ** 2 + sampled_point.y ** 2)
+        nearest_node = Node()
+        nearest_dist = np.sqrt(sampled_point[0] ** 2 + sampled_point[1] ** 2)
         for node in tree:
             if np.sqrt(node.x ** 2 + node.y ** 2) < nearest_dist:
                 nearest_dist = np.sqrt(node.x ** 2 + node.y ** 2)
@@ -209,9 +217,10 @@ class RRT(object):
         x = sampled_point[0] - nearest_node.x
         y = sampled_point[1] - nearest_node.y
         d = np.sqrt(x ** 2 + y ** 2)
-        x = STEER_DIST * x / d
-        y = STEER_DIST * y / d
-        new_node = (x, y, nearest_node, False)
+        if d != 0:
+            x = STEER_DIST * x / d
+            y = STEER_DIST * y / d
+        new_node = Node(x, y, nearest_node, False)
 
         if self.check_collision(nearest_node, new_node):
             return None
@@ -232,16 +241,25 @@ class RRT(object):
         x = nearest_node.x - new_node.x
         y = nearest_node.y - new_node.y
         d = dist([nearest_node.x, nearest_node.y], [new_node.x, new_node.y])
-        inc_x = x / d
-        inc_y = y / d
+        if d==0 :
+            inc_x = 1
+            inc_y = 1
+        else:
+            inc_x = x / d
+            inc_y = y / d
+        x_i = nearest_node.x
+        y_i = nearest_node.y
         collision = False
-
-        for x_i in range(nearest_node.x, new_node.x, inc_x):
-            for y_i in range(nearest_node.y, new_node.y, inc_y):
-                if self.grid[np.round(x_i, 0), np.round(y_i, 0)]:
+        
+        while x_i <= new_node.x:
+            while y_i <= new_node.y:
+                if self.grid[int(round(x_i, 0)), int(round(y_i, 0))]:
                     collision = True
                     return collision
+                y_i += inc_y
+            x_i += inc_x
         return collision
+
 
     def is_goal(self, latest_added_node, goal_x, goal_y):
         """

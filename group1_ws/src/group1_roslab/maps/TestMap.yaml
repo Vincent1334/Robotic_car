@@ -1,0 +1,6 @@
+image: TestMap.png
+resolution: 0.2 #m per pixel
+origin:  [-1.0, -1.0, 0] #[x, y, rot]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.2
