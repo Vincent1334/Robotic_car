@@ -1,10 +1,10 @@
 
 "use strict";
 
-let AckermannDriveStamped = require('./AckermannDriveStamped.js');
 let AckermannDrive = require('./AckermannDrive.js');
+let AckermannDriveStamped = require('./AckermannDriveStamped.js');
 
 module.exports = {
-  AckermannDriveStamped: AckermannDriveStamped,
   AckermannDrive: AckermannDrive,
+  AckermannDriveStamped: AckermannDriveStamped,
 };

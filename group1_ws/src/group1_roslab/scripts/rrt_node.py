@@ -19,10 +19,11 @@ from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 
 # TODO: import as you need
-ITERATIONS = 5000
-GOAL_RADIUS = 1.5
-STEER_DIST = 0.5
+ITERATIONS = 5000# 5000
+GOAL_RADIUS = 1#1.5
+STEER_DIST = 0.5# 0.5
 CAR_SIZE = 0.4
+
 
 
 # class def for tree nodes
@@ -55,17 +56,15 @@ class RRT(object):
         self.map_origin_x = 0
         self.map_origin_y = 0
         self.map_origin_rot = 0
+        self.map_obstacle = 0
+        self.map_free = 0
         self.got_map = False
         self.tree = []  # list of nodes
         self.x_pos = 0.0  # the cars x position
         self.y_pos = 0.0  # the cars y position
         self.goal = [0.0, 0.0]  # goal position
         self.markerArr = MarkerArray()
-        
-        print ("-----------------------------------------------------------------------------------")
-
-        print ("----------------------------------------init-------------------------------------------")
-        print ("-----------------------------------------------------------------------------------")
+    
 
 
     def pf_callback(self, pose_msg):
@@ -75,9 +74,9 @@ class RRT(object):
         # Args:
         # pose_msg (PoseStamped): incoming message from subscribed topic
         # Returns:
-        self.x_pos = pose_msg.pose.position.x
-        self.y_pos = pose_msg.pose.position.y
-
+        pos = self.conv_to_gridposition(pose_msg.pose.position.x,pose_msg.pose.position.y)
+        self.x_pos = pos[0]
+        self.y_pos = pos[1]
         return None
 
     def conv_to_gridposition(self, x, y):
@@ -87,8 +86,8 @@ class RRT(object):
         # y (float): y coordiantes
         # Returns:
         # (idx_x , idx_y) (int int): tuple with the x and y position on the grid
-        idx_x = x + self.map_origin_x
-        idx_y = y + self.map_origin_y
+        idx_x = int(np.round(((x - self.map_origin_x) / self.map_resolution) ,0))
+        idx_y = int(np.round(((y - self.map_origin_y) / self.map_resolution) ,0))
         return idx_x, idx_y
 
     def conv_to_free_space(self, idx_x, idx_y):
@@ -101,8 +100,8 @@ class RRT(object):
         world_x , world_y) (float float): tuple with the x and y position in world
         coordinates
         """
-        world_x = idx_x - self.map_origin_x
-        world_y = idx_y - self.map_origin_y
+        world_x = (idx_x  * self.map_resolution)+ self.map_origin_x + 1/2 * self.map_resolution
+        world_y = (idx_y  * self.map_resolution)+ self.map_origin_y + 1/2 * self.map_resolution
         return world_x, world_y
 
     def map_callback(self, map_msg):
@@ -114,17 +113,17 @@ class RRT(object):
         """
         self.map_height = map_msg.info.height
         self.map_width = map_msg.info.width
-        self.grid = np.zeros((self.map_width, self.map_height))  # OccupancyGrid
-        a = 0
-        for i in self.grid:
-            i[0] = map_msg.data[a]
-            a += 1
-            i[1] = map_msg.data[a]
-            a += 1
-
+       
+        self.grid = np.zeros((self.map_height, self.map_width))  # OccupancyGrid      
+        
+        self.grid = np.reshape(map_msg.data[::-1], (self.map_height, self.map_width))
+        self.grid = np.rot90(np.rot90(np.rot90(np.fliplr(self.grid))))
+        
         self.map_resolution = map_msg.info.resolution
         self.map_origin_x = map_msg.info.origin.position.x
         self.map_origin_y = map_msg.info.origin.position.y
+        self.map_obstacle = 0.65
+        self.map_free = 0.2
 
         return None
 
@@ -141,38 +140,49 @@ class RRT(object):
         self.goal = [goal_msg.pose.position.x, goal_msg.pose.position.y]
 
         # function to test your point conversions
+        #print("Goal_world", self.goal[0], self.goal[1])
         goal_idx = self.conv_to_gridposition(self.goal[0], self.goal[1])
-        print("Goal_idx", goal_idx)
+        #print("Goal_map", goal_idx)
         freeSpacePosition = self.conv_to_free_space(goal_idx[0], goal_idx[1])
+        #print("Goal_world", freeSpacePosition)
         self.visualizeMarkers((freeSpacePosition[0], freeSpacePosition[1]))  # create a waypoint in Rviz
 
         # if this node gets a map
         if self.map_width != 0 and self.map_height != 0:
+            
+
             # do RRT
-            start_pos = [self.map_origin_x, self.map_origin_y]
+            start_pos = [self.x_pos,self.y_pos]
             goal_region = [goal_idx[0], goal_idx[1]], GOAL_RADIUS
             step_dist = STEER_DIST
             node_0 = Node(start_pos[0], start_pos[1], None, True)  # [x_pos, y_pos, parent_node, is_root]
+            
             self.tree.append(node_0)  # add first node to node tree
             for j in range(0, ITERATIONS):
-                randPoint = self.sample()  # get random Point in occupancy grid
-                if not self.inside_obstacle(randPoint):
-                    k_nearest = self.nearest(self.tree, randPoint)  # find nearest node to the sampled point
-                    k_new = self.steer(k_nearest,
-                                       randPoint)  # return a node between k_nearest and the random point that is a
-                    # STEER_DIST away from the nearest_node. If collision with obstacle return None.
-                    if k_new is not None:
-                        self.tree.append(k_new)
-                        if self.is_goal(k_new, goal_idx[0], goal_idx[1]):
-                            path = self.find_path(k_new)  # return list of nodes from start node to goal node
-                            print(path)
-                            break
+                if j == ITERATIONS-1:
+                    print("iteration",j)
+                randPoint = self.sample()  # get random Point in occupancy grid 
+                #self.visualizeMarkers(self.conv_to_free_space(randPoint[0], randPoint[1]))
+                k_nearest = self.nearest(self.tree, randPoint)  # find nearest node to the sampled point
+                k_new = self.steer(k_nearest, randPoint)  # return a node between k_nearest and the random point that is a
+                # STEER_DIST away from the nearest_node. If collision with obstacle return None.
+                if k_new is not None:
+                    self.tree.append(k_new)
+                    print("k_new", k_new.x, k_new.y)
+                    #self.visualizeMarkers(self.conv_to_free_space(k_new.x, k_new.y))
+                    if self.is_goal(k_new, goal_idx[0], goal_idx[1]):
+                        print("goal")
+                        path = self.find_path(k_new)  # return list of nodes from start node to goal node
+                        for node in path:
+                            print("path_node",node.x,node.y)
+                            self.visualizeMarkers(self.conv_to_free_space(node.x, node.y))
+                        break
 
                             # and publish the path
             self.publish_path(path)
 
     def inside_obstacle(self, randPoint):
-        return self.grid[randPoint[0], randPoint[1]] == 1
+        return self.grid[randPoint[0], randPoint[1]] >= self.map_obstacle
 
     def sample(self):
         """
@@ -181,10 +191,13 @@ class RRT(object):
         Returns:
         (x, y) (float float): a tuple representing the sampled point on the grid
         """
-        x = np.random.random_integers(0, self.map_width - 1)
-        y = np.random.random_integers(0, self.map_height - 1)
-        xy = (x,y)
-        return xy
+        
+        while True:
+            x = np.random.random_integers(0, self.map_width - 1)
+            y = np.random.random_integers(0, self.map_height - 1)
+            if not self.inside_obstacle([x,y]):
+                xy = (x,y)
+                return xy
 
     def nearest(self, tree, sampled_point):
         """
@@ -195,13 +208,13 @@ class RRT(object):
         Returns:
         nearest_node (int): index of neareset node on the tree
         """
+                
         nearest_node = Node()
-        nearest_dist = np.sqrt(sampled_point[0] ** 2 + sampled_point[1] ** 2)
+        nearest_dist = np.inf
         for node in tree:
-            if np.sqrt(node.x ** 2 + node.y ** 2) < nearest_dist:
-                nearest_dist = np.sqrt(node.x ** 2 + node.y ** 2)
+            if dist([node.x,node.y],sampled_point)< nearest_dist:
+                nearest_dist = dist([node.x,node.y],sampled_point)
                 nearest_node = node
-
         return nearest_node
 
     def steer(self, nearest_node, sampled_point):
@@ -214,18 +227,21 @@ class RRT(object):
         Returns:
         new_node (Node): new node created from steering
         """
-        x = sampled_point[0] - nearest_node.x
+        x = sampled_point[0] - nearest_node.x 
         y = sampled_point[1] - nearest_node.y
+        
         d = np.sqrt(x ** 2 + y ** 2)
-        if d != 0:
-            x = STEER_DIST * x / d
-            y = STEER_DIST * y / d
-        new_node = Node(x, y, nearest_node, False)
-
-        if self.check_collision(nearest_node, new_node):
+        if d == 0:
             return None
+        
+        x = nearest_node.x +  STEER_DIST * x / d
+        y = nearest_node.y + STEER_DIST * y / d
+            
+        new_node = Node(x, y, nearest_node, False)
+        if self.check_collision(nearest_node, new_node):
+            return new_node
 
-        return new_node
+        return None
 
     def check_collision(self, nearest_node, new_node):
         """
@@ -238,27 +254,19 @@ class RRT(object):
         collision (bool): whether the path between the two nodes are in collision
         with the occupancy grid
         """
-        x = nearest_node.x - new_node.x
-        y = nearest_node.y - new_node.y
-        d = dist([nearest_node.x, nearest_node.y], [new_node.x, new_node.y])
-        if d==0 :
-            inc_x = 1
-            inc_y = 1
-        else:
-            inc_x = x / d
-            inc_y = y / d
-        x_i = nearest_node.x
-        y_i = nearest_node.y
-        collision = False
+        x = new_node.x - nearest_node.x
+        y = new_node.y - nearest_node.y
+        d = np.sqrt(x ** 2 + y ** 2)
         
-        while x_i <= new_node.x:
-            while y_i <= new_node.y:
-                if self.grid[int(round(x_i, 0)), int(round(y_i, 0))]:
-                    collision = True
-                    return collision
-                y_i += inc_y
-            x_i += inc_x
-        return collision
+        for i in range(1,10):
+            test_x = new_node.x +  i * x/10
+            test_y = new_node.y + i *  y/10
+            #self.visualizeMarkers(self.conv_to_free_space(test_x, test_y))
+            if self.inside_obstacle([int(round(test_x, 0)), int(round(test_y, 0))]):
+                return False
+
+        return True
+
 
 
     def is_goal(self, latest_added_node, goal_x, goal_y):
@@ -302,7 +310,7 @@ class RRT(object):
         # add node positions from path to the msg
         for node in path:
             pose = PoseStamped()
-            pose.pose.position.x = self.conv_to_free_space(node.position.x, node.position.y)
+            pose.pose.position.x ,pose.pose.position.y = self.conv_to_free_space(node.x, node.y)
             msg.poses.append(pose)
 
             # publish the path

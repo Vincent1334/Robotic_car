@@ -12,7 +12,7 @@ from nav_msgs.msg import Path
 import numpy as np
 
 L = 1
-index_last_waypoint = 300
+index_last_waypoint = 0
 
 class PurePursuit(object):
     """
@@ -21,7 +21,7 @@ class PurePursuit(object):
     def __init__(self):
         #Topic for Simulation
         self.pose_sub = rospy.Subscriber('/pf/viz/inferred_pose', PoseStamped, self.pose_callback)
-        self.path_sub = rospy.Subscriber('rrt_path', Path, self.pose_callback)
+        self.path_sub = rospy.Subscriber('rrt_path', Path, self.path_callback)
         #Topic for real world
         #self.pose_sub = rospy.Subscriber('/pf/inferred_pose', PoseStamped, self.pose_callback)
         self.drive_pub = rospy.Publisher('vesc/high_level/ackermann_cmd_mux/input/nav_0', AckermannDriveStamped, queue_size = 10)
@@ -79,11 +79,14 @@ class PurePursuit(object):
             drive_msg = AckermannDriveStamped()
             drive_msg.header.stamp = rospy.Time.now()
             drive_msg.drive.steering_angle = curvature
-            drive_msg.drive.speed = 1
+            if index_last_waypoint >= len(self.path_points) - 2:
+                drive_msg.drive.speed = 0
+            else:
+                drive_msg.drive.speed = 1
             self.drive_pub.publish(drive_msg)
         
     def path_callback(self, path_msg):        
-        path_points = [(float(pose.position.x), float(pose.position.y), float(pose.position.z)) for pose in path_msg.poses]
+        self.path_points = [(float(pose.pose.position.x), float(pose.pose.position.y), float(0)) for pose in path_msg.poses]
 
 def main():
     rospy.init_node('rrt_pure_pursuit_node')

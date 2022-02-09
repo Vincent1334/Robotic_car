@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+
+  <include file="$(find racecar_gazebo)/launch/racecar.launch">
+	<arg name="world_name" value="track_barca"/>
+  </include >
+  <node pkg="wall_following" name="sim_connector_node" type="sim_connector.py" output="screen"/>
+
+  <node pkg="group1_roslab" name="WallFollow_node" type="sim_wall_following.py" output="screen"/>
+  
+
+</launch>
