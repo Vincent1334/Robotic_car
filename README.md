@@ -1,7 +1,7 @@
 # 🚘 Autonomes Auto 🚘
 Praktikum Robotik und Automation “Autonomes Fahren”
 
-<img src="img/car_test01.gif" width="200"/> <img src="img/car.jpg" width="420"/> 
+<img src="img/car_test01.gif" width="170"/> <img src="img/car.jpg" width="420"/> 
 
 # Release
 ## Sheet01
